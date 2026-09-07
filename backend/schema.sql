@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS messages (
+    id INT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    message VARCHAR(255) NOT NULL,
+    PRIMARY KEY (id)
+);
