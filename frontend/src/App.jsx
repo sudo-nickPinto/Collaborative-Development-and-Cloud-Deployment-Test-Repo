@@ -17,6 +17,12 @@ function App() {
   const [status, setStatus] = useState('idle') //options are:  idle | submitting | success | error
   const [errorMessage, setErrorMessage] = useState('')
 
+  const [tahaName, setTahaName] = useState('')
+  const [tahaMessage, setTahaMessage] = useState('')
+  const [tahaCategory, setTahaCategory] = useState('')
+  const [tahaStatus, setTahaStatus] = useState('idle')
+  const [tahaError, setTahaError] = useState('')
+
   // Runs when the form is submitted (button click or Enter key).
   async function handleSubmit(event) {
     // Stop the browser's default full-page reload on form submit;
@@ -51,6 +57,36 @@ function App() {
     }
   }
 
+  async function handleTahaSubmit(event) {
+    event.preventDefault()
+    setTahaStatus('submitting')
+    setTahaError('')
+
+    try {
+      const response = await fetch(`${API_URL}/api/taha-messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: tahaName,
+          message: tahaMessage,
+          category: tahaCategory,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`)
+      }
+
+      setTahaStatus('success')
+      setTahaName('')
+      setTahaMessage('')
+      setTahaCategory('')
+    } catch (error) {
+      setTahaStatus('error')
+      setTahaError(error.message)
+    }
+  }
+
   return (
     <main>
       <h1>Submit a Message</h1>
@@ -73,6 +109,47 @@ function App() {
       {/* Only one of these renders at a time, based on the current status. */}
       {status === 'success' && <p className="feedback success">Sent!</p>}
       {status === 'error' && <p className="feedback error">Error: {errorMessage}</p>}
+
+      <section className="taha-feature">
+        <h2>Taha's Categorized Message</h2>
+        <form onSubmit={handleTahaSubmit}>
+          <label>
+            Name
+            <input
+              value={tahaName}
+              onChange={(event) => setTahaName(event.target.value)}
+              maxLength="100"
+              required
+            />
+          </label>
+          <label>
+            Category
+            <input
+              value={tahaCategory}
+              onChange={(event) => setTahaCategory(event.target.value)}
+              maxLength="100"
+              required
+            />
+          </label>
+          <label>
+            Message
+            <input
+              value={tahaMessage}
+              onChange={(event) => setTahaMessage(event.target.value)}
+              maxLength="255"
+              required
+            />
+          </label>
+
+          <button type="submit" disabled={tahaStatus === 'submitting'}>
+            {tahaStatus === 'submitting' ? 'Saving...' : 'Save Taha Message'}
+          </button>
+        </form>
+        {tahaStatus === 'success' && (
+          <p className="feedback success">Saved to both tables!</p>
+        )}
+        {tahaStatus === 'error' && <p className="feedback error">Error: {tahaError}</p>}
+      </section>
     </main>
   )
 }

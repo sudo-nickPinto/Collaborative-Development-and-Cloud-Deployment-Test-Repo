@@ -47,6 +47,17 @@ button:disabled {
   cursor: default;
 }
 
+.taha-feature {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.taha-feature h2 {
+  color: var(--text-h);
+  font-size: 24px;
+}
+
 /* One of these two is shown after a submit attempt finishes, depending
    on whether the fetch call in App.jsx succeeded or failed. */
 .feedback.success {
