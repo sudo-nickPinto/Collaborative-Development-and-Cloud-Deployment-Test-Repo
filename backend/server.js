@@ -51,6 +51,50 @@ app.post("/api/messages", (req, res) => {
   });
 });
 
+
+app.post("/api/pronob", (req, res) => {
+  const { name, message, note } = req.body;
+
+  if (!name || !message || !note) {
+    return res.status(400).json({
+      error: "Name, message, and note are required",
+    });
+  }
+
+  const messageSql =
+    "INSERT INTO messages (name, message, pronob_note) VALUES (?, ?, ?)";
+
+  db.query(messageSql, [name, message, note], (err, result) => {
+    if (err) {
+      console.error("Message insert failed:", err);
+      return res.status(500).json({
+        error: "Failed to insert message",
+      });
+    }
+
+    const messageId = result.insertId;
+
+    const pronobSql =
+      "INSERT INTO pronob_entries (message_id, note) VALUES (?, ?)";
+
+    db.query(pronobSql, [messageId, note], (err) => {
+      if (err) {
+        console.error("Pronob entry insert failed:", err);
+        return res.status(500).json({
+          error: "Failed to insert Pronob entry",
+        });
+      }
+
+      res.status(201).json({
+        id: messageId,
+        name,
+        message,
+        note,
+      });
+    });
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
