@@ -8,6 +8,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use(require("./apurb-feedback"));
+
 const db = mysql.createConnection(process.env.MYSQL_URL);
 
 db.connect((err) => {
