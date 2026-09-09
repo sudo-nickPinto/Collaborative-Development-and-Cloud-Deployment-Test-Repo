@@ -11,6 +11,7 @@ function App() {
   // and every keystroke updates it via onChange below.
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
+  const [course, setCourse] = useState('')
 
   // Tracks where we are in the submit process, so the UI can show a
   // loading state and a success/error message .
@@ -51,6 +52,31 @@ function App() {
     }
   }
 
+  async function handleCourseSubmit() {
+    setStatus('submitting')
+    setErrorMessage('')
+
+    try {
+      const response = await fetch(`${API_URL}/api/ulugbek-courses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, message, course }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`)
+      }
+
+      setStatus('success')
+      setName('')
+      setMessage('')
+      setCourse('')
+    } catch (error) {
+      setStatus('error')
+      setErrorMessage(error.message)
+    }
+  }
+
   return (
     <main>
       <h1>Submit a Message</h1>
@@ -63,10 +89,17 @@ function App() {
           Message
           <input value={message} onChange={(e) => setMessage(e.target.value)} required />
         </label>
+        <label>
+          Ulugbek's Course
+          <input value={course} onChange={(e) => setCourse(e.target.value)} />
+        </label>
 
         {/* Disabled while submitting so a slow request can't be double-sent. */}
         <button type="submit" disabled={status === 'submitting'}>
           {status === 'submitting' ? 'Sending...' : 'Send'}
+        </button>
+        <button type="button" onClick={handleCourseSubmit} disabled={status === 'submitting'}>
+          Save course
         </button>
 
       </form>

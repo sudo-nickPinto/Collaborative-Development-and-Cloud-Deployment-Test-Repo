@@ -51,6 +51,43 @@ app.post("/api/messages", (req, res) => {
   });
 });
 
+app.post("/api/ulugbek-courses", (req, res) => {
+  const { name, message, course } = req.body;
+
+  if (!name || !message || !course) {
+    return res.status(400).json({
+      error: "Name, message, and course are required",
+    });
+  }
+
+  const messageSql =
+    "INSERT INTO messages (name, message, ulugbek_course) VALUES (?, ?, ?)";
+
+  db.query(messageSql, [name, message, course], (err, result) => {
+    if (err) {
+      console.error("Insert failed:", err);
+      return res.status(500).json({ error: "Failed to save course message" });
+    }
+
+    const courseSql =
+      "INSERT INTO ulugbek_table (message_id, course) VALUES (?, ?)";
+
+    db.query(courseSql, [result.insertId, course], (err) => {
+      if (err) {
+        console.error("Insert failed:", err);
+        return res.status(500).json({ error: "Failed to save course message" });
+      }
+
+      res.status(201).json({
+        id: result.insertId,
+        name,
+        message,
+        course,
+      });
+    });
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
