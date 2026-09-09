@@ -1,0 +1,2 @@
+ALTER TABLE messages
+ADD COLUMN pronob_note VARCHAR(255);

@@ -4,58 +4,56 @@ import ApurbFeedback from './ApurbFeedback'
 
 // Base URL of the backend API, read from the Vite environment variable
 // VITE_API_URL (set in .env.local for dev, and in Vercel's project
-// settings for the deployed site). 
+// settings for the deployed site).
 const API_URL = import.meta.env.VITE_API_URL
 
 function App() {
-  // React holds the current value of each field,
-  // and every keystroke updates it via onChange below.
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
   const [course, setCourse] = useState('')
+  const [pronobName, setPronobName] = useState('')
+  const [pronobMessage, setPronobMessage] = useState('')
+  const [note, setNote] = useState('')
 
-  // Tracks where we are in the submit process, so the UI can show a
-  // loading state and a success/error message .
-  const [status, setStatus] = useState('idle') //options are:  idle | submitting | success | error
-  const [errorMessage, setErrorMessage] = useState('')
+  const [messageStatus, setMessageStatus] = useState('idle')
+  const [pronobStatus, setPronobStatus] = useState('idle')
+  const [messageError, setMessageError] = useState('')
+  const [pronobError, setPronobError] = useState('')
 
-  // Runs when the form is submitted (button click or Enter key).
-  async function handleSubmit(event) {
-    // Stop the browser's default full-page reload on form submit;
-    // we're handling the submission with fetch instead.
+  async function submitForm(
+    event,
+    endpoint,
+    body,
+    setStatus,
+    setError,
+    clearFields,
+  ) {
     event.preventDefault()
     setStatus('submitting')
-    setErrorMessage('')
+    setError('')
 
     try {
-      // Send the form values to the backend as JSON. 
-      // the backend is responsible for actually writing to the database.
-      const response = await fetch(`${API_URL}/api/messages`, {
+      const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, message }),
+        body: JSON.stringify(body),
       })
 
-      // fetch() only rejects on network failure, not on HTTP error
-      // status codes, so we have to check response.ok ourselves.
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}`)
       }
 
       setStatus('success')
-      setName('')
-      setMessage('')
+      clearFields()
     } catch (error) {
-      // Catches both network errors (fetch rejected) and the
-      // "bad status code" error thrown above.
       setStatus('error')
-      setErrorMessage(error.message)
+      setError(error.message)
     }
   }
 
   async function handleCourseSubmit() {
-    setStatus('submitting')
-    setErrorMessage('')
+    setMessageStatus('submitting')
+    setMessageError('')
 
     try {
       const response = await fetch(`${API_URL}/api/ulugbek-courses`, {
@@ -68,47 +66,139 @@ function App() {
         throw new Error(`Server responded with ${response.status}`)
       }
 
-      setStatus('success')
+      setMessageStatus('success')
       setName('')
       setMessage('')
       setCourse('')
     } catch (error) {
-      setStatus('error')
-      setErrorMessage(error.message)
+      setMessageStatus('error')
+      setMessageError(error.message)
     }
   }
 
   return (
     <main>
       <h1>Submit a Message</h1>
-      <form onSubmit={handleSubmit}>
+
+      <h2>Original message</h2>
+      <form
+        onSubmit={(event) =>
+          submitForm(
+            event,
+            '/api/messages',
+            { name, message },
+            setMessageStatus,
+            setMessageError,
+            () => {
+              setName('')
+              setMessage('')
+            },
+          )
+        }
+      >
         <label>
           Name
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
         </label>
+
         <label>
           Message
-          <input value={message} onChange={(e) => setMessage(e.target.value)} required />
+          <input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            required
+          />
         </label>
         <label>
           Ulugbek's Course
           <input value={course} onChange={(e) => setCourse(e.target.value)} />
         </label>
 
-        {/* Disabled while submitting so a slow request can't be double-sent. */}
-        <button type="submit" disabled={status === 'submitting'}>
-          {status === 'submitting' ? 'Sending...' : 'Send'}
+        <button type="submit" disabled={messageStatus === 'submitting'}>
+          {messageStatus === 'submitting' ? 'Sending...' : 'Send message'}
         </button>
-        <button type="button" onClick={handleCourseSubmit} disabled={status === 'submitting'}>
+        <button
+          type="button"
+          onClick={handleCourseSubmit}
+          disabled={messageStatus === 'submitting'}
+        >
           Save course
         </button>
-
       </form>
       {/* Only one of these renders at a time, based on the current status. */}
-      {status === 'success' && <p className="feedback success">Sent!</p>}
-      {status === 'error' && <p className="feedback error">Error: {errorMessage}</p>}
+      {messageStatus === 'success' && (
+        <p className="feedback success">Message sent!</p>
+      )}
 
-	<ApurbFeedback />
+      {messageStatus === 'error' && (
+        <p className="feedback error">Error: {messageError}</p>
+      )}
+
+      <ApurbFeedback />
+
+      <h2>Pronob entry</h2>
+      <form
+        onSubmit={(event) =>
+          submitForm(
+            event,
+            '/api/pronob',
+            { name: pronobName, message: pronobMessage, note },
+            setPronobStatus,
+            setPronobError,
+            () => {
+              setPronobName('')
+              setPronobMessage('')
+              setNote('')
+            },
+          )
+        }
+      >
+        <label>
+          Name
+          <input
+            value={pronobName}
+            onChange={(e) => setPronobName(e.target.value)}
+            maxLength={100}
+            required
+          />
+        </label>
+
+        <label>
+          Message
+          <input
+            value={pronobMessage}
+            onChange={(e) => setPronobMessage(e.target.value)}
+            maxLength={255}
+            required
+          />
+        </label>
+
+        <label>
+          Note
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={255}
+            required
+          />
+        </label>
+
+        <button type="submit" disabled={pronobStatus === 'submitting'}>
+          {pronobStatus === 'submitting' ? 'Sending...' : 'Send Pronob entry'}
+        </button>
+      </form>
+
+      {pronobStatus === 'success' && (
+        <p className="feedback success">Pronob entry sent!</p>
+      )}
+
+      {pronobStatus === 'error' && (
+        <p className="feedback error">Error: {pronobError}</p>
+      )}
     </main>
   )
 }
