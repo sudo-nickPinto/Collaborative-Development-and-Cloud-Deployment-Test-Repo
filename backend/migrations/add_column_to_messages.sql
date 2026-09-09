@@ -1,0 +1,2 @@
+ALTER TABLE messages
+ADD COLUMN ulugbek_course VARCHAR(100) NULL;

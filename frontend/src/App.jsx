@@ -9,6 +9,7 @@ const API_URL = import.meta.env.VITE_API_URL
 function App() {
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
+  const [course, setCourse] = useState('')
   const [pronobName, setPronobName] = useState('')
   const [pronobMessage, setPronobMessage] = useState('')
   const [note, setNote] = useState('')
@@ -49,6 +50,31 @@ function App() {
     }
   }
 
+  async function handleCourseSubmit() {
+    setMessageStatus('submitting')
+    setMessageError('')
+
+    try {
+      const response = await fetch(`${API_URL}/api/ulugbek-courses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, message, course }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`)
+      }
+
+      setMessageStatus('success')
+      setName('')
+      setMessage('')
+      setCourse('')
+    } catch (error) {
+      setMessageStatus('error')
+      setMessageError(error.message)
+    }
+  }
+
   return (
     <main>
       <h1>Submit a Message</h1>
@@ -86,9 +112,20 @@ function App() {
             required
           />
         </label>
+        <label>
+          Ulugbek's Course
+          <input value={course} onChange={(e) => setCourse(e.target.value)} />
+        </label>
 
         <button type="submit" disabled={messageStatus === 'submitting'}>
           {messageStatus === 'submitting' ? 'Sending...' : 'Send message'}
+        </button>
+        <button
+          type="button"
+          onClick={handleCourseSubmit}
+          disabled={messageStatus === 'submitting'}
+        >
+          Save course
         </button>
       </form>
 
