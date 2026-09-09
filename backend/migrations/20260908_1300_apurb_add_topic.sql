@@ -1,0 +1,2 @@
+ALTER TABLE messages
+ADD COLUMN apurb_topic VARCHAR(100) NULL;

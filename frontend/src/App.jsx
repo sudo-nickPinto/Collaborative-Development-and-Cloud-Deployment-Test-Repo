@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './App.css'
+import ApurbFeedback from './ApurbFeedback'
 
 // Base URL of the backend API, read from the Vite environment variable
 // VITE_API_URL (set in .env.local for dev, and in Vercel's project
@@ -106,6 +107,8 @@ function App() {
       {/* Only one of these renders at a time, based on the current status. */}
       {status === 'success' && <p className="feedback success">Sent!</p>}
       {status === 'error' && <p className="feedback error">Error: {errorMessage}</p>}
+
+	<ApurbFeedback />
     </main>
   )
 }
