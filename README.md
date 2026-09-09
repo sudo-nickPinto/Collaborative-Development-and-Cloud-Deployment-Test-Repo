@@ -1,46 +1,21 @@
-# Collaborative-Development-and-Cloud-Deployment-Test-Repo
+# Collaborative Development and Cloud Deployment
 
-## Message with Feedback feature
+A CS 440 team assignment for practicing collaborative full-stack development and cloud deployment. The project starts with a simple message-submission application, which team members extend through feature branches, pull requests, code review, and database migrations.
 
-The main page includes a separate **Message with Feedback** form alongside the original message form. Clicking **Save Feedback** sends a name, message, topic, and feedback note to the backend. The backend inserts a message and its related feedback row in one transaction.
+## How the application works
 
-| Input | Maximum length | Database destination |
-| --- | --- | --- |
-| Name | 100 characters | `messages.name` |
-| Message | 255 characters | `messages.message` |
-| Topic | 100 characters | `messages.apurb_topic` |
-| Feedback note | 255 characters | `apurb_feedback.note` |
+The React frontend, built with Vite and hosted on Vercel, collects user input and sends JSON requests to a Node.js/Express backend hosted on Railway. The backend writes records to a MySQL database on Railway and returns a success or error response to the page.
 
-All four inputs must be nonblank strings. The backend trims surrounding whitespace and checks length limits. The new `apurb_topic` column allows `NULL` so the original message endpoint can continue inserting without a topic.
+The original form accepts a name and message and sends them to `POST /api/messages`. The baseline `messages` table contains an automatically generated `id`, a `name`, and a `message`. Individual features build on this foundation by adding inputs and buttons, a column to the shared table, and a separate related table.
 
-### Implementation
+| Location | Purpose |
+| --- | --- |
+| `frontend/` | React page, components, styles, and Vite configuration |
+| `backend/` | Express API and database access |
+| `backend/schema.sql` | Initial definition of the shared `messages` table |
+| `backend/migrations/` | Database changes introduced by team features |
 
-- `frontend/src/ApurbFeedback.jsx`: form, input state, request, and success/error feedback.
-- `frontend/src/App.jsx`: displays the new component on the main page.
-- `backend/apurb-feedback.js`: validates input and inserts both records using a connection reserved from a MySQL pool.
-- `backend/server.js`: registers the new route after JSON parsing and environment configuration.
-- `backend/migrations/`: SQL files that extend the baseline database schema.
-
-The backend uses parameterized SQL. It inserts into `messages` first, then uses that row's generated ID as `apurb_feedback.message_id`. A foreign key links the two tables. Both inserts commit together; an insert failure triggers rollback. Both tables must use InnoDB for the intended transaction behavior.
-
-### API
-
-`POST /api/apurb-feedback`
-
-Send `Content-Type: application/json` with this request structure:
-
-```json
-{
-  "name": "Example Student",
-  "message": "APURB-LOCAL-TEST-001",
-  "topic": "Coursework",
-  "note": "Checking that both rows are saved"
-}
-```
-
-A successful response has status `201` and contains `messageId` and `feedbackId`, the generated IDs of the two records. Invalid input returns `400`; a database or server failure returns `500` with a generic error message. Detailed database errors are logged by the backend.
-
-### Database setup and migration order
+## Local database setup
 
 Use a separate local MySQL database for development. In MySQL Workbench, connect to the local server and execute:
 
@@ -49,26 +24,11 @@ CREATE DATABASE IF NOT EXISTS cs440_collab;
 USE cs440_collab;
 ```
 
-For a fresh database, execute `backend/schema.sql` first to create the original `messages` table. Then apply these migrations in order:
+Execute `backend/schema.sql` first, then the migrations required by the features in your checked-out branch. Follow each feature's documented migration order. In Workbench, select the intended database before opening and executing each SQL file; keep environment-specific database names out of the migration files.
 
-1. `backend/migrations/20260908_1300_apurb_add_topic.sql` — adds nullable `messages.apurb_topic`.
-2. `backend/migrations/20260908_1310_apurb_create_feedback.sql` — creates `apurb_feedback` with `id`, `message_id`, and `note`.
+Apply each migration once per database and record which files have been applied. The SQL files are executed manually: saving, committing, or deploying them does not run them automatically. Inspect existing column and table definitions before rerunning a migration.
 
-To apply a file in Workbench, select the intended database, open the SQL file, and execute its statements. For local testing, run `USE cs440_collab;` in the same query tab before the migration. Keep that local database name out of the migration files so they can also be used in environments with another database name.
-
-**Apply each migration once per database.** These are manually executed SQL files; there is no migration runner or applied-migration history table. Saving, committing, or deploying the files does not execute them. Record which migrations have been applied. If a column or table already exists, inspect its definition before deciding whether the corresponding migration is already complete.
-
-Verify the resulting schema:
-
-```sql
-USE cs440_collab;
-DESCRIBE messages;
-DESCRIBE apurb_feedback;
-SHOW CREATE TABLE messages;
-SHOW CREATE TABLE apurb_feedback;
-```
-
-### Environment configuration and local startup
+## Environment configuration and local startup
 
 Create `backend/.env` with local connection settings, replacing the placeholders:
 
@@ -105,51 +65,23 @@ npm run dev
 
 Dependency installation is only needed when dependencies are missing or the lockfile changes. Keep both servers running and open the frontend URL printed by Vite. Restart the backend after editing its code or `.env`; restart Vite after changing its environment file.
 
-### Verification procedure
+## Testing and collaboration
 
-1. Submit the example values above through **Message with Feedback**. Expect **Saved to both tables!** and cleared inputs.
-2. Verify the related records using the query below. Use a new distinctive message for each test run if the example has already been submitted.
-3. Submit through the original form. Confirm it still inserts into `messages` without requiring a topic or feedback row.
-4. Try empty fields and whitespace-only input. Confirm rejection and no new records for rejected requests.
-5. In an isolated local test, temporarily point the second INSERT at a nonexistent table, restart the backend, and submit a unique message. Confirm an error and no matching row in `messages`, demonstrating rollback. Restore the correct table name, restart, and retest before committing.
-6. From `frontend`, run `npm run lint` and `npm run build`.
+Test each feature locally by submitting its form and checking the resulting database records. Confirm that existing message and teammate workflows still work. From `frontend`, run `npm run lint` and `npm run build` before requesting review.
 
-```sql
-SELECT
-    m.id AS message_id,
-    m.name,
-    m.message,
-    m.apurb_topic,
-    f.id AS feedback_id,
-    f.note
-FROM messages AS m
-JOIN apurb_feedback AS f
-    ON f.message_id = m.id
-WHERE m.message = 'APURB-LOCAL-TEST-001';
-```
+Work on a feature branch, commit and push your changes, and open a pull request with a description of the feature, its migrations, and completed tests. Incorporate the latest `main`, resolve conflicts while preserving teammates' work, and obtain review before merging.
 
-#### Recorded verification status
+## Deployment
 
-During local troubleshooting on September 9, 2026, the backend started successfully, logged `Connected to MySQL`, and returned HTTP `200` with `Backend is running` from `GET /`. These checks confirm startup and basic connectivity, not successful two-table insertion.
+The team deploys the frontend to Vercel and the backend and MySQL database to Railway. Apply any pending migrations to the intended Railway database before deploying code that depends on them; changes to a local database do not propagate to Railway.
 
-The following results have not yet been recorded in this README:
+Set the backend's `MYSQL_URL` through Railway's environment settings and the frontend's `VITE_API_URL` to the Railway backend base URL, without a trailing slash. Rebuild and redeploy the frontend when its code or build-time environment changes. Coordinate migrations with any automatic deployments triggered by merging.
 
-- [ ] Successful form submission verified by the joined database query.
-- [ ] Original form regression test.
-- [ ] Invalid-input rejection with no inserted records.
-- [ ] Rollback test.
-- [ ] Frontend lint and production build.
-- [ ] Deployed end-to-end test with database verification.
+After deployment, submit through the live application and verify the resulting database records. Also check that existing workflows still function.
 
-Update this checklist only after completing the corresponding checks.
+## Message with Feedback feature
 
-### Deployment
-
-Coordinate with the team member managing Railway and Vercel. Apply both migrations once to the intended Railway MySQL database before deploying code that uses them. Confirm whether they have already been applied; local database changes do not propagate to Railway.
-
-Configure the backend's `MYSQL_URL` through Railway's environment settings. Keep Vercel's `VITE_API_URL` pointed at the Railway backend base URL, without a trailing slash, and rebuild/redeploy the frontend when its code or build-time environment changes. No new base URL is needed for this endpoint.
-
-After deployment, submit a uniquely named cloud test message and run the joined query against Railway to verify both records. Also check that the original form still works. Coordinate migration timing with any automatic deployments triggered by merging.
+Adds a separate form for a name, message, topic, and feedback note. `POST /api/apurb-feedback` validates the input and saves linked rows in `messages` and `apurb_feedback` in one transaction, preserving the original form. Its migrations add nullable `messages.apurb_topic` and create `apurb_feedback`; apply `20260908_1300_apurb_add_topic.sql` before `20260908_1310_apurb_create_feedback.sql` from `backend/migrations/`.
 
 ## Taha's Categorized Message feature
 
