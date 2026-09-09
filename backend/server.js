@@ -175,6 +175,118 @@ app.post("/api/ulugbek-courses", (req, res) => {
   });
 });
 
+app.post("/api/taha-messages", (req, res) => {
+  const { name, message, category } = req.body;
+
+  if (
+    typeof name !== "string" ||
+    typeof message !== "string" ||
+    typeof category !== "string" ||
+    !name.trim() ||
+    !message.trim() ||
+    !category.trim()
+  ) {
+    return res.status(400).json({
+      error: "Name, message, and category are required",
+    });
+  }
+
+  const tahaMessage = {
+    name: name.trim(),
+    message: message.trim(),
+    category: category.trim(),
+  };
+
+  if (
+    tahaMessage.name.length > 100 ||
+    tahaMessage.message.length > 255 ||
+    tahaMessage.category.length > 100
+  ) {
+    return res.status(400).json({
+      error: "One or more fields exceed the allowed length",
+    });
+  }
+
+  // db is a pool; check out a single connection so the transaction
+  // statements below all run on the same MySQL session.
+  db.getConnection((connectionError, connection) => {
+    if (connectionError) {
+      console.error("Failed to reserve database connection:", connectionError);
+      return res.status(500).json({ error: "Failed to save Taha's message" });
+    }
+
+    connection.beginTransaction((transactionError) => {
+      if (transactionError) {
+        connection.release();
+        console.error("Transaction failed to start:", transactionError);
+        return res.status(500).json({ error: "Failed to save Taha's message" });
+      }
+
+      const messageSql = `
+        INSERT INTO messages (name, message, taha_category)
+        VALUES (?, ?, ?)
+      `;
+
+      connection.query(
+        messageSql,
+        [tahaMessage.name, tahaMessage.message, tahaMessage.category],
+        (messageError, messageResult) => {
+          if (messageError) {
+            return connection.rollback(() => {
+              connection.release();
+              console.error("Main table insert failed:", messageError);
+              res.status(500).json({ error: "Failed to save Taha's message" });
+            });
+          }
+
+          const tahaSql = `
+            INSERT INTO taha_messages (message_id, name, message, category)
+            VALUES (?, ?, ?, ?)
+          `;
+
+          connection.query(
+            tahaSql,
+            [
+              messageResult.insertId,
+              tahaMessage.name,
+              tahaMessage.message,
+              tahaMessage.category,
+            ],
+            (tahaError, tahaResult) => {
+              if (tahaError) {
+                return connection.rollback(() => {
+                  connection.release();
+                  console.error("Taha table insert failed:", tahaError);
+                  res.status(500).json({ error: "Failed to save Taha's message" });
+                });
+              }
+
+              connection.commit((commitError) => {
+                if (commitError) {
+                  return connection.rollback(() => {
+                    connection.release();
+                    console.error("Transaction commit failed:", commitError);
+                    res
+                      .status(500)
+                      .json({ error: "Failed to save Taha's message" });
+                  });
+                }
+
+                connection.release();
+                res.status(201).json({
+                  messageId: messageResult.insertId,
+                  tahaMessageId: tahaResult.insertId,
+                  ...tahaMessage,
+                });
+              });
+            },
+          );
+        },
+      );
+    });
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

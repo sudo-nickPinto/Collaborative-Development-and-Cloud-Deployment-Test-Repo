@@ -1,0 +1,2 @@
+ALTER TABLE messages
+ADD COLUMN taha_category VARCHAR(100) NULL;

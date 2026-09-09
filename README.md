@@ -150,3 +150,14 @@ Coordinate with the team member managing Railway and Vercel. Apply both migratio
 Configure the backend's `MYSQL_URL` through Railway's environment settings. Keep Vercel's `VITE_API_URL` pointed at the Railway backend base URL, without a trailing slash, and rebuild/redeploy the frontend when its code or build-time environment changes. No new base URL is needed for this endpoint.
 
 After deployment, submit a uniquely named cloud test message and run the joined query against Railway to verify both records. Also check that the original form still works. Coordinate migration timing with any automatic deployments triggered by merging.
+
+## Taha's Categorized Message feature
+
+The Taha feature is implemented by `POST /api/taha-messages`. Its transaction
+writes the submitted name, message, and category to both `messages` and
+`taha_messages`, so either both rows are committed or neither row is saved.
+
+Migrations: `backend/migrations/202609081200_add_taha_category_to_messages.sql`
+adds the nullable `messages.taha_category` column, and
+`backend/migrations/202609081210_create_taha_messages.sql` creates the
+`taha_messages` table. Apply both once to the target database.
